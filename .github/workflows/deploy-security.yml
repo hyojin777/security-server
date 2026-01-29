@@ -1,0 +1,28 @@
+name: security-server Github Actions
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  DepolyExample: # job Name
+    runs-on: ubuntu-latest # Github Actions를 실행할 서버 종류
+
+    steps:
+      - name: EC2 서버 접속하기
+        uses: appleboy/ssh-action@v1 # EC2 서버에 SSH 접속하는 Action
+        with:
+          # SSH 접속에 필요한 3요소
+          host: ${{ secrets.EC2_HOST }}         # 서버 아이피
+          username: ${{ secrets.EC2_USERNAME }} # 서버 계정 (ex: ubuntu)
+          key: ${{ secrets.EC2_PRIVATE_KEY }}   # 개인키 (*.pem -> 내용물)
+          # 명령어 중 하나라도 실패하면 즉시 중단할지 여부
+          script_stop: true
+          # 서버에 접속한 뒤 실행할 명령어들
+          script: |
+            cd /home/nero/security-server
+            git pull origin main
+            ./gradlew clean build
+            sudo fuser -k -n tcp 8080 || true
+            nohup java -jar build/libs/*SNAPSHOT.jar > ./security.log 2>&1 &
